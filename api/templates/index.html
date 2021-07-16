@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>Forsch: A Forth Clone</title>
+
+    <link rel="stylesheet" href=css/styles.css?v=1.0">
+
+</head>
+
+<body>
+    <h1>Forsch: A Forth Clone</h1>
+    <form id="code-form" method="post" action=".">
+        <textarea id="code" name="code" cols="75" rows="20" placeholder=": CODE GOES HERE ;">{% if code %}{{ code }}{% endif %}</textarea>
+        <input type="submit" value="run">
+    </form>
+    <div id=result>
+        {% if result %}
+            {{ result }}
+        {% endif %}
+    </div>
+</body>
+</html>

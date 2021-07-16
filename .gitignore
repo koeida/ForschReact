@@ -18,6 +18,9 @@
 .env.test.local
 .env.production.local
 *.swp
+*.pyc
+/api/env
+/api/__pycache__
 
 npm-debug.log*
 yarn-debug.log*
