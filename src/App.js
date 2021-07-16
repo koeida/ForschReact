@@ -5,7 +5,7 @@ import React from "react";
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
   WordDict: [],
-  Input: ["1", "1", "+"],
+  Input: [],
   InputIndex: 0,
   mode: "Execute",
   CurWordDef: [],
@@ -14,16 +14,22 @@ const DEFAULT_ENVIRONMENT = {
 
 const STEPPER_URL = "http://localhost:3000/step";
 
+function Word(props) {
+  return (<div key={props.i} className="word ms-2">{props.wordString}</div>);
+}
+
 function Stepper(props) {
+  const words = props.curLine.map((w,i) => <Word key={i} wordString={w} />);
+
   return (
     <div id="stepper" className="d-flex flex-row">
       <button id="step-back" className="btn btn-primary">
         <i className="fas fa-chevron-left"></i>
       </button>
       <div id="current-line" className="flex-grow-1 bg-dark form-control">
-        <p id="code" className="text-white align-middle mb-0">
-          {props.curLine}
-        </p>
+        <div id="code" className="text-white align-middle mb-0 d-flex flex-row">
+          {words}
+        </div>
       </div>
       <button id="step-forward" className="btn btn-primary" onClick={props.onForward}>
         <i className="fas fa-chevron-right"></i>
@@ -61,13 +67,12 @@ function InputForm(props) {
   }
 }
 
-function Stack() {
+function Stack(props) {
+  const stackElements = props.stack.map((v,i) => <li key={i}>{JSON.stringify(v)}</li>)
   return (
     <div className="well">
       <ul id="stack">
-        <li>1</li>
-        <li>1</li>
-        <li>a_string</li>
+        {stackElements} 
       </ul>
     </div>
   );
@@ -77,7 +82,6 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      curLine: "",
       mode: "pause",
       input: "",
       environment: DEFAULT_ENVIRONMENT,
@@ -86,9 +90,12 @@ class App extends React.Component {
 
   handleDebuggerClick = (e) => {
     e.preventDefault();
+    let newEnvironment = JSON.parse(JSON.stringify(this.state.environment));
+    newEnvironment["Input"] = this.state.input.trim().split(" ");
+
     this.setState({
       mode: "debug",
-      curLine: this.state.input,
+      environment: newEnvironment,
     });
   };
 
@@ -99,6 +106,7 @@ class App extends React.Component {
   };
 
   onEnvironmentUpdate = (e) => {
+    console.log(e);
     this.setState({
       environment: e
     });
@@ -106,7 +114,6 @@ class App extends React.Component {
 
   handleStepForward = (event) => {
     $.post(STEPPER_URL, JSON.stringify(this.state.environment), this.onEnvironmentUpdate, "json");
-
   };
 
   render() {
@@ -126,7 +133,7 @@ class App extends React.Component {
         <div className="container g-0">
           <div className="row">
             <div className="col-lg-8 g-0">
-              <Stepper onForward={this.handleStepForward} curLine={this.state.curLine} />
+              <Stepper onForward={this.handleStepForward} curLine={this.state.environment["Input"]} />
               <InputForm
                 input={this.state.input}
                 handleChange={this.handleInputChange}
@@ -135,7 +142,7 @@ class App extends React.Component {
               />
             </div>
             <div className="col-lg-4">
-              <Stack />
+              <Stack stack={this.state.environment['DataStack']} />
             </div>
           </div>
         </div>
