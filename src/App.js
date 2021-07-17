@@ -4,7 +4,10 @@ import React from "react";
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
-  WordDict: [{ WordName: "ADD1", IsImmediate: false, WordText: ["1", "+"] }],
+  WordDict: [
+    { WordName: "ADD1", IsImmediate: false, WordText: ["1", "+"] },
+    { WordName: "ADD2", IsImmediate: false, WordText: ["ADD1", "ADD1"] },
+  ],
   Input: [],
   InputIndex: 0,
   mode: "Execute",
@@ -19,6 +22,18 @@ function jsonDeepClone(json) {
 }
 function peek(a) {
   return a.slice(-1)[0];
+}
+
+function dropWhile(f, a) {
+  if (a.length === 0) {
+    return [];
+  }
+
+  if (!f(a[0])) {
+    return a;
+  } else {
+    return dropWhile(f, a.slice(1));
+  }
 }
 
 function Word(props) {
@@ -188,7 +203,7 @@ class App extends React.Component {
     super(props);
     this.state = {
       mode: "pause",
-      input: "1 ADD1 +",
+      input: "1 ADD2 ADD2",
       environments: [DEFAULT_ENVIRONMENT],
     };
   }
@@ -218,12 +233,46 @@ class App extends React.Component {
 
   onEnvironmentUpdate = (e) => {
     const inputIsComplete = e["InputIndex"] === e["Input"].length;
-    this.setState((state) => {
-      return {
-        environments: state.environments.slice(0, -1).concat(e),
-        mode: inputIsComplete ? "pause" : state.mode,
-        input: inputIsComplete ? "" : state.input,
-      };
+    var newEnvironments;
+    var newMode;
+    var newInput;
+    if (inputIsComplete && this.state.environments.length === 1) {
+      console.log("here");
+      newEnvironments = this.state.environments.slice(0, -1).concat(e);
+      newMode = "pause";
+      newInput = "";
+    } else if (inputIsComplete && this.state.environments.length > 1) {
+      //If the new environment is at the end of its input, we need to
+      //continue destroying environments until we get to one that is
+      //unfinished.
+      var remainingEnvironments = dropWhile(
+        (env) => env["InputIndex"] === env["Input"].length - 1,
+        this.state.environments.reverse()
+      ).reverse();
+
+      if (remainingEnvironments.length === 0) {
+        newMode = "pause"
+        newInput = ""
+        newEnvironments = [e];
+      } else {
+        const newHeadEnv = peek(remainingEnvironments);
+        newHeadEnv["DataStack"] = e["DataStack"];
+        newHeadEnv["InputIndex"] += 1;
+        newEnvironments = remainingEnvironments.slice(0, -1).concat(newHeadEnv);
+        newInput = this.state.input;
+        newMode = this.state.mode;
+      }
+
+    } else if (!inputIsComplete) {
+      newEnvironments = this.state.environments.slice(0, -1).concat(e);
+      newMode = this.state.mode;
+      newInput = this.state.input;
+    }
+
+    this.setState({
+      environments: newEnvironments,
+      mode: newMode,
+      input: newInput,
     });
   };
 

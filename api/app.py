@@ -10,7 +10,6 @@ app = Flask(__name__)
 def step():
     try:
         request_data = request.get_json(force=True)
-
         
         client = Client(config.FORSCH_URL)
         result = client.service.EvalStep(str(request_data).replace("False", "false"))
