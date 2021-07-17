@@ -1,12 +1,20 @@
-#stack {
-  background-color: #333333;
+.card {
+  background-color: #EEEEEE;
 }
 .current-word {
   background-color: #333333;
 }
 
+.dictionary-current-word {
+  background-color: #f8ff5e;
+}
+
 .stack-word {
-  background-color: #333333;
+  background-color: #DDDDDD;
+}
+
+.card-header {
+  font-weight: bold;
 }
 
 .word-fstr {

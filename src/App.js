@@ -14,9 +14,13 @@ const DEFAULT_ENVIRONMENT = {
 
 const STEPPER_URL = "http://localhost:3000/step";
 
+function jsonDeepClone(json) {
+  return JSON.parse(JSON.stringify(json));
+}
+
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
-  const className = "word ms-2 fs-3 text " + currentClass;
+  const className = "word ms-2 text " + currentClass;
   return (
     <div key={props.i} className={className}>
       {props.wordString}
@@ -30,12 +34,20 @@ function Stepper(props) {
     return <Word key={i} isCurrentWord={isCurrentWord} wordString={w} />;
   });
 
+  const currentLineClasses =
+    "flex-grow-1 form-control " +
+    (props.isEnabled ? "bg-dark" : "bg-secondary");
+
   return (
-    <div id="stepper" className="d-flex flex-row">
-      <button id="step-back" className="btn btn-primary">
+    <div id="stepper" className="d-flex flex-row my-2">
+      <button
+        disabled={!props.isEnabled}
+        id="step-back"
+        className="btn btn-primary"
+      >
         <i className="fas fa-chevron-left"></i>
       </button>
-      <div id="current-line" className="flex-grow-1 bg-dark form-control">
+      <div id="current-line" className={currentLineClasses}>
         <div id="code" className="text-white align-middle mb-0 d-flex flex-row">
           {words}
         </div>
@@ -44,6 +56,7 @@ function Stepper(props) {
         id="step-forward"
         className="btn btn-primary"
         onClick={props.onForward}
+        disabled={!props.isEnabled}
       >
         <i className="fas fa-chevron-right"></i>
       </button>
@@ -52,46 +65,98 @@ function Stepper(props) {
 }
 
 function InputForm(props) {
-    return (
-      <form id="input-form" className="flex-grow-1">
-        <input
-          type="text"
-          value={props.input}
-          onChange={props.handleChange}
-          className="form-control flex-grow-1"
+  return (
+    <form id="input-form" className="flex-grow-1">
+      <input
+        type="text"
+        value={props.input}
+        onChange={props.handleChange}
+        className="form-control flex-grow-1 my-2"
+        disabled={!props.isEnabled}
+      ></input>
+      <div className="d-flex flex-row-reverse bd-highlight mb-3 g-0">
+        <button
+          id="debug-button"
+          className="btn btn-primary ms-3"
+          onClick={(e) => props.onDebug(e)}
           disabled={!props.isEnabled}
-        ></input>
-        <div className="d-flex flex-row-reverse bd-highlight mb-3 g-0">
-          <button
-            id="debug-button"
-            className="btn btn-primary ms-3"
-            onClick={(e) => props.onDebug(e)}
-            disabled={!props.isEnabled}
-          >
-            <i class="fas fa-bug me-2"></i>Debug
-          </button>
-          <button disabled={!props.isEnabled} id="execute-button" className="btn btn-primary ms-3">
-            <i class="fas fa-play me-2"></i>Execute
-          </button>
-        </div>
-      </form>
+        >
+          <i className="fas fa-bug me-2"></i>Debug
+        </button>
+        <button
+          disabled={!props.isEnabled}
+          id="execute-button"
+          className="btn btn-primary ms-3"
+        >
+          <i className="fas fa-play me-2"></i>Execute
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Dictionary(props) {
+  const words = props.dictionary.map((w) => {
+    const immediateMarker = w["IsImmediate"] ? (
+      <i className="fas fa-bolt me-1" title="Immediate Word"></i>
+    ) : null;
+    const wordClass =
+      w["WordName"] === props.currentWord
+        ? "dictionary-current-word"
+        : "bg-light";
+    return (
+      <tr className={wordClass}>
+        <td>
+          {immediateMarker}
+          {w["WordName"]}
+        </td>
+        <td>{w["WordText"].join(" ")}</td>
+      </tr>
     );
+  });
+
+  return (
+    <div id="dictionary" className="card">
+      <div className="card-header text-center">
+        <i className="fas fa-book me-1"></i>Dictionary
+      </div>
+      <div className="card-body">
+        <table className="table table-bordered">
+          <thead className="bg-light">
+            <tr>
+              <th scope="col">Name</th>
+              <th scope="col">Definition</th>
+            </tr>
+          </thead>
+          <tbody>{words}</tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function Stack(props) {
-  const stackElements = props.stack.map((v, i) => {
-    const className = "word-" + v["type"].toLowerCase();
-    const wrapper = v["type"] === "FStr" ? "\"" : "";
-    return <li className={className + " bg-dark list-group-item text-center fs-3 mx-2"} key={i}>{wrapper + v["value"] + wrapper}</li>
-  }).reverse();
+  const stackElements = props.stack
+    .map((v, i) => {
+      const className = "word-" + v["type"].toLowerCase();
+      const wrapper = v["type"] === "FStr" ? '"' : "";
+      return (
+        <li className={className + " list-group-item text-center mx-2"} key={i}>
+          {wrapper + v["value"] + wrapper}
+        </li>
+      );
+    })
+    .reverse();
 
   return (
-      <div id="stack" className="card">
-        <div className="card-header text-center text-white fs-3">Stack</div>
-        <div className="card-body">
-          <ul className="list-group">{stackElements}</ul>
-        </div>
+    <div id="stack" className="card">
+      <div className="card-header text-center">
+        <i className="fas fa-layer-group me-1"></i>Stack
       </div>
+      <div className="card-body">
+        <ul className="list-group">{stackElements}</ul>
+      </div>
+    </div>
   );
 }
 
@@ -100,15 +165,19 @@ class App extends React.Component {
     super(props);
     this.state = {
       mode: "pause",
-      input: "1 2 SWAP 3 4 SWAP + + + 10 =",
+      input: ": ADD1 1 + ;",
       environment: DEFAULT_ENVIRONMENT,
     };
   }
 
   handleDebuggerClick = (e) => {
     e.preventDefault();
-    let newEnvironment = JSON.parse(JSON.stringify(this.state.environment));
+    let newEnvironment = jsonDeepClone(this.state.environment);
     newEnvironment["Input"] = this.state.input.trim().split(" ");
+    newEnvironment["mode"] = "Execute";
+    newEnvironment["InputIndex"] = 0;
+    newEnvironment["CurWordDef"] = [];
+    newEnvironment["CurWord"] = "";
 
     this.setState({
       mode: "debug",
@@ -124,12 +193,18 @@ class App extends React.Component {
 
   onEnvironmentUpdate = (e) => {
     console.log(e);
-    this.setState({
-      environment: e,
+    const inputIsComplete = e["InputIndex"] === e["Input"].length;
+    this.setState((state) => {
+      return {
+        environment: e,
+        mode: inputIsComplete ? "pause" : state.mode,
+        input: inputIsComplete ? "" : state.input,
+      };
     });
   };
 
   handleStepForward = (event) => {
+    console.log(JSON.stringify(this.state.environment));
     $.post(
       STEPPER_URL,
       JSON.stringify(this.state.environment),
@@ -139,12 +214,18 @@ class App extends React.Component {
   };
 
   render() {
+    const e = this.state.environment
+    const currentWord = e["Input"].length !== 0 ? e["Input"][e["InputIndex"]] : "";
+    console.log("current word: " + currentWord);
     return (
       <div id="app-main">
         <div className="container-fluid">
           <header>
             <div className="d-flex justify-content-center px-3 py-2 bg-light mb-4">
-                <h1><i className="fas fa-layer-group me-4"></i>Forsch: A Forth Clone in C#</h1>
+              <h1>
+                <i className="fas fa-layer-group me-4"></i>Forsch: A Forth Clone
+                in C#
+              </h1>
             </div>
           </header>
         </div>
@@ -155,6 +236,7 @@ class App extends React.Component {
                 onForward={this.handleStepForward}
                 curWordIndex={this.state.environment["InputIndex"]}
                 curLine={this.state.environment["Input"]}
+                isEnabled={this.state.mode === "debug"}
               />
               <InputForm
                 input={this.state.input}
@@ -169,7 +251,7 @@ class App extends React.Component {
               <Stack stack={this.state.environment["DataStack"]} />
             </div>
             <div className="col-8">
-              <p>Dictionary goes here</p>
+              <Dictionary dictionary={this.state.environment["WordDict"]} currentWord={currentWord} />
             </div>
           </div>
         </div>

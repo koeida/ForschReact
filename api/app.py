@@ -11,8 +11,9 @@ def step():
     try:
         request_data = request.get_json(force=True)
 
+        
         client = Client(config.FORSCH_URL)
-        result = client.service.EvalStep(str(request_data))
+        result = client.service.EvalStep(str(request_data).replace("False", "false"))
 
     except Exception as e:
         print('error: ' + str(e))
