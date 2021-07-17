@@ -4,7 +4,7 @@ import React from "react";
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
-  WordDict: [],
+  WordDict: [{ WordName: "ADD1", IsImmediate: false, WordText: ["1", "+"] }],
   Input: [],
   InputIndex: 0,
   mode: "Execute",
@@ -24,7 +24,6 @@ function peek(a) {
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
   const className = "word ms-2 text " + currentClass;
-
   if (props.isCurrentWord && props.curWordInDict) {
     return (
       <button
@@ -189,11 +188,10 @@ class App extends React.Component {
     super(props);
     this.state = {
       mode: "pause",
-      input: ": ADD1 1 + ;",
+      input: "1 ADD1 +",
       environments: [DEFAULT_ENVIRONMENT],
     };
   }
-
 
   handleDebuggerClick = (e) => {
     e.preventDefault();
@@ -207,8 +205,8 @@ class App extends React.Component {
     this.setState((state, props) => {
       return {
         mode: "debug",
-        environments: state.environments.slice(0,-1).concat(newEnvironment),
-      }
+        environments: state.environments.slice(0, -1).concat(newEnvironment),
+      };
     });
   };
 
@@ -219,11 +217,10 @@ class App extends React.Component {
   };
 
   onEnvironmentUpdate = (e) => {
-    console.log(e);
     const inputIsComplete = e["InputIndex"] === e["Input"].length;
     this.setState((state) => {
       return {
-        environments: state.environments.slice(0,-1).concat(e),
+        environments: state.environments.slice(0, -1).concat(e),
         mode: inputIsComplete ? "pause" : state.mode,
         input: inputIsComplete ? "" : state.input,
       };
@@ -231,7 +228,6 @@ class App extends React.Component {
   };
 
   handleStepForward = (event) => {
-    console.log(JSON.stringify(peek(this.state.environments)));
     $.post(
       STEPPER_URL,
       JSON.stringify(peek(this.state.environments)),
@@ -241,13 +237,41 @@ class App extends React.Component {
   };
 
   stepInHandler = (event) => {
-    var word = event.target.value;
-  }
+    const word = event.target.value;
+    const newEnv = jsonDeepClone(peek(this.state.environments));
+    newEnv["Input"] = newEnv["WordDict"].find((w) => w["WordName"] === word)[
+      "WordText"
+    ];
+    newEnv["InputIndex"] = 0;
+    this.setState((state, props) => {
+      return {
+        environments: state.environments.concat(newEnv),
+      };
+    });
+  };
 
   render() {
     const e = peek(this.state.environments);
-    const curWord = e["Input"].length !== 0 ? e["Input"][e["InputIndex"]] : "";
-    const curWordInDict = e["WordDict"].some((w) => w["WordName"] === curWord);
+    const curWord = (env) =>
+      env["Input"].length !== 0 ? env["Input"][env["InputIndex"]] : "";
+    const curWordInDict = (env) =>
+      env["WordDict"].some((w) => w["WordName"] === curWord(env));
+    const steppers = this.state.environments.map((env, i) => {
+      const isEnabled =
+        i === this.state.environments.length - 1 && this.state.mode === "debug";
+      return (
+        <Stepper
+          key={i}
+          onForward={this.handleStepForward}
+          curWord={curWord(env)}
+          curWordInDict={curWordInDict(env)}
+          curIndex={env["InputIndex"]}
+          curLine={env["Input"]}
+          isEnabled={isEnabled}
+          stepInHandler={isEnabled ? this.stepInHandler : () => {}}
+        />
+      );
+    });
 
     return (
       <div id="app-main">
@@ -264,15 +288,7 @@ class App extends React.Component {
         <div id="body-container" className="container">
           <div className="row d-flex justify-content-center">
             <div className="">
-              <Stepper
-                onForward={this.handleStepForward}
-                curWord={curWord}
-                curWordInDict={curWordInDict}
-                curIndex={e["InputIndex"]}
-                curLine={e["Input"]}
-                isEnabled={this.state.mode === "debug"}
-                stepInHandler={this.stepInHandler}
-              />
+              {steppers}
               <InputForm
                 input={this.state.input}
                 handleChange={this.handleInputChange}
@@ -286,10 +302,7 @@ class App extends React.Component {
               <Stack stack={e["DataStack"]} />
             </div>
             <div className="col-8">
-              <Dictionary
-                dictionary={e["WordDict"]}
-                curWord={curWord}
-              />
+              <Dictionary dictionary={e["WordDict"]} curWord={curWord} />
             </div>
           </div>
         </div>
