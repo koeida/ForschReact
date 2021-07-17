@@ -21,17 +21,38 @@ function jsonDeepClone(json) {
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
   const className = "word ms-2 text " + currentClass;
-  return (
-    <div key={props.i} className={className}>
-      {props.wordString}
-    </div>
-  );
+
+  if (props.isCurrentWord && props.curWordInDict) {
+    return (
+      <button
+        className="btn btn-success p-0 ms-2"
+        onClick={props.stepInHandler}
+        key={props.i}
+      >
+        {props.wordString}
+      </button>
+    );
+  } else {
+    return (
+      <div key={props.i} className={className}>
+        {props.wordString}
+      </div>
+    );
+  }
 }
 
 function Stepper(props) {
   const words = props.curLine.map((w, i) => {
-    const isCurrentWord = i === props.curWordIndex;
-    return <Word key={i} isCurrentWord={isCurrentWord} wordString={w} />;
+    const isCurrentWord = i === props.curIndex;
+    return (
+      <Word
+        key={i}
+        curIndex={props.curIndex}
+        isCurrentWord={isCurrentWord}
+        curWordInDict={props.curWordInDict}
+        wordString={w}
+      />
+    );
   });
 
   const currentLineClasses =
@@ -101,11 +122,9 @@ function Dictionary(props) {
       <i className="fas fa-bolt me-1" title="Immediate Word"></i>
     ) : null;
     const wordClass =
-      w["WordName"] === props.currentWord
-        ? "dictionary-current-word"
-        : "bg-light";
+      w["WordName"] === props.curWord ? "dictionary-current-word" : "bg-light";
     return (
-      <tr className={wordClass}>
+      <tr key={w["WordName"]} className={wordClass}>
         <td>
           {immediateMarker}
           {w["WordName"]}
@@ -214,9 +233,11 @@ class App extends React.Component {
   };
 
   render() {
-    const e = this.state.environment
-    const currentWord = e["Input"].length !== 0 ? e["Input"][e["InputIndex"]] : "";
-    console.log("current word: " + currentWord);
+    const e = this.state.environment;
+    const curWord = e["Input"].length !== 0 ? e["Input"][e["InputIndex"]] : "";
+    const curWordInDict = e["WordDict"].some((w) => w["WordName"] === curWord);
+    console.log(curWordInDict);
+
     return (
       <div id="app-main">
         <div className="container-fluid">
@@ -234,7 +255,9 @@ class App extends React.Component {
             <div className="">
               <Stepper
                 onForward={this.handleStepForward}
-                curWordIndex={this.state.environment["InputIndex"]}
+                curWord={curWord}
+                curWordInDict={curWordInDict}
+                curIndex={this.state.environment["InputIndex"]}
                 curLine={this.state.environment["Input"]}
                 isEnabled={this.state.mode === "debug"}
               />
@@ -251,7 +274,10 @@ class App extends React.Component {
               <Stack stack={this.state.environment["DataStack"]} />
             </div>
             <div className="col-8">
-              <Dictionary dictionary={this.state.environment["WordDict"]} currentWord={currentWord} />
+              <Dictionary
+                dictionary={this.state.environment["WordDict"]}
+                curWord={curWord}
+              />
             </div>
           </div>
         </div>
