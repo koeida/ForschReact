@@ -141,16 +141,16 @@ class App extends React.Component {
   render() {
     return (
       <div id="app-main">
-        <div className="container-fluid g-0">
+        <div className="container-fluid">
           <header>
             <div className="d-flex justify-content-center px-3 py-2 bg-light mb-4">
                 <h1><i className="fas fa-layer-group me-4"></i>Forsch: A Forth Clone in C#</h1>
             </div>
           </header>
         </div>
-        <div className="container g-0">
-          <div className="row">
-            <div className="col-lg-12 g-0">
+        <div id="body-container" className="container">
+          <div className="row d-flex justify-content-center">
+            <div className="">
               <Stepper
                 onForward={this.handleStepForward}
                 curWordIndex={this.state.environment["InputIndex"]}
