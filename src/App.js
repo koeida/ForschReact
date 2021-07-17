@@ -9,17 +9,26 @@ const DEFAULT_ENVIRONMENT = {
   InputIndex: 0,
   mode: "Execute",
   CurWordDef: [],
-  CurWord: '',
+  CurWord: "",
 };
 
 const STEPPER_URL = "http://localhost:3000/step";
 
 function Word(props) {
-  return (<div key={props.i} className="word ms-2">{props.wordString}</div>);
+  const currentClass = props.isCurrentWord ? "current-word" : "";
+  const className = "word ms-2 fs-3 text " + currentClass;
+  return (
+    <div key={props.i} className={className}>
+      {props.wordString}
+    </div>
+  );
 }
 
 function Stepper(props) {
-  const words = props.curLine.map((w,i) => <Word key={i} wordString={w} />);
+  const words = props.curLine.map((w, i) => {
+    const isCurrentWord = i === props.curWordIndex;
+    return <Word key={i} isCurrentWord={isCurrentWord} wordString={w} />;
+  });
 
   return (
     <div id="stepper" className="d-flex flex-row">
@@ -31,7 +40,11 @@ function Stepper(props) {
           {words}
         </div>
       </div>
-      <button id="step-forward" className="btn btn-primary" onClick={props.onForward}>
+      <button
+        id="step-forward"
+        className="btn btn-primary"
+        onClick={props.onForward}
+      >
         <i className="fas fa-chevron-right"></i>
       </button>
     </div>
@@ -39,7 +52,6 @@ function Stepper(props) {
 }
 
 function InputForm(props) {
-  if (props.isEnabled) {
     return (
       <form id="input-form" className="flex-grow-1">
         <input
@@ -47,34 +59,39 @@ function InputForm(props) {
           value={props.input}
           onChange={props.handleChange}
           className="form-control flex-grow-1"
+          disabled={!props.isEnabled}
         ></input>
         <div className="d-flex flex-row-reverse bd-highlight mb-3 g-0">
           <button
             id="debug-button"
             className="btn btn-primary ms-3"
             onClick={(e) => props.onDebug(e)}
+            disabled={!props.isEnabled}
           >
-            Debug
+            <i class="fas fa-bug me-2"></i>Debug
           </button>
-          <button id="execute-button" className="btn btn-primary ms-3">
-            Execute
+          <button disabled={!props.isEnabled} id="execute-button" className="btn btn-primary ms-3">
+            <i class="fas fa-play me-2"></i>Execute
           </button>
         </div>
       </form>
     );
-  } else {
-    return null;
-  }
 }
 
 function Stack(props) {
-  const stackElements = props.stack.map((v,i) => <li key={i}>{JSON.stringify(v)}</li>)
+  const stackElements = props.stack.map((v, i) => {
+    const className = "word-" + v["type"].toLowerCase();
+    const wrapper = v["type"] === "FStr" ? "\"" : "";
+    return <li className={className + " bg-dark list-group-item text-center fs-3 mx-2"} key={i}>{wrapper + v["value"] + wrapper}</li>
+  }).reverse();
+
   return (
-    <div className="well">
-      <ul id="stack">
-        {stackElements} 
-      </ul>
-    </div>
+      <div id="stack" className="card">
+        <div className="card-header text-center text-white fs-3">Stack</div>
+        <div className="card-body">
+          <ul className="list-group">{stackElements}</ul>
+        </div>
+      </div>
   );
 }
 
@@ -83,7 +100,7 @@ class App extends React.Component {
     super(props);
     this.state = {
       mode: "pause",
-      input: "",
+      input: "1 2 SWAP 3 4 SWAP + + + 10 =",
       environment: DEFAULT_ENVIRONMENT,
     };
   }
@@ -108,12 +125,17 @@ class App extends React.Component {
   onEnvironmentUpdate = (e) => {
     console.log(e);
     this.setState({
-      environment: e
+      environment: e,
     });
   };
 
   handleStepForward = (event) => {
-    $.post(STEPPER_URL, JSON.stringify(this.state.environment), this.onEnvironmentUpdate, "json");
+    $.post(
+      STEPPER_URL,
+      JSON.stringify(this.state.environment),
+      this.onEnvironmentUpdate,
+      "json"
+    );
   };
 
   render() {
@@ -121,19 +143,19 @@ class App extends React.Component {
       <div id="app-main">
         <div className="container-fluid g-0">
           <header>
-            <div className="px-3 py-2 bg-dark bg-gradient text-white">
-              <div className="container">
-                <div className="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
-                  <h1>Forsch: A Forth Clone in C#</h1>
-                </div>
-              </div>
+            <div className="d-flex justify-content-center px-3 py-2 bg-light mb-4">
+                <h1><i className="fas fa-layer-group me-4"></i>Forsch: A Forth Clone in C#</h1>
             </div>
           </header>
         </div>
         <div className="container g-0">
           <div className="row">
-            <div className="col-lg-8 g-0">
-              <Stepper onForward={this.handleStepForward} curLine={this.state.environment["Input"]} />
+            <div className="col-lg-12 g-0">
+              <Stepper
+                onForward={this.handleStepForward}
+                curWordIndex={this.state.environment["InputIndex"]}
+                curLine={this.state.environment["Input"]}
+              />
               <InputForm
                 input={this.state.input}
                 handleChange={this.handleInputChange}
@@ -141,8 +163,13 @@ class App extends React.Component {
                 onDebug={this.handleDebuggerClick}
               />
             </div>
-            <div className="col-lg-4">
-              <Stack stack={this.state.environment['DataStack']} />
+          </div>
+          <div className="row">
+            <div className="col-4">
+              <Stack stack={this.state.environment["DataStack"]} />
+            </div>
+            <div className="col-8">
+              <p>Dictionary goes here</p>
             </div>
           </div>
         </div>

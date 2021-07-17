@@ -1,0 +1,26 @@
+#stack {
+  background-color: #333333;
+}
+.current-word {
+  background-color: #333333;
+}
+
+.stack-word {
+  background-color: #333333;
+}
+
+.word-fstr {
+  color: red;
+}
+
+.word-fint {
+  color: #4444FF;
+}
+
+.word-word {
+  color: #009900;
+}
+
+.word-fbool {
+  color: purple;
+}
