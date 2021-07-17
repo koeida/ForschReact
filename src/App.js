@@ -17,6 +17,9 @@ const STEPPER_URL = "http://localhost:3000/step";
 function jsonDeepClone(json) {
   return JSON.parse(JSON.stringify(json));
 }
+function peek(a) {
+  return a.slice(-1)[0];
+}
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
@@ -27,6 +30,7 @@ function Word(props) {
       <button
         className="btn btn-success p-0 ms-2"
         onClick={props.stepInHandler}
+        value={props.wordString}
         key={props.i}
       >
         {props.wordString}
@@ -50,6 +54,7 @@ function Stepper(props) {
         curIndex={props.curIndex}
         isCurrentWord={isCurrentWord}
         curWordInDict={props.curWordInDict}
+        stepInHandler={props.stepInHandler}
         wordString={w}
       />
     );
@@ -185,22 +190,25 @@ class App extends React.Component {
     this.state = {
       mode: "pause",
       input: ": ADD1 1 + ;",
-      environment: DEFAULT_ENVIRONMENT,
+      environments: [DEFAULT_ENVIRONMENT],
     };
   }
 
+
   handleDebuggerClick = (e) => {
     e.preventDefault();
-    let newEnvironment = jsonDeepClone(this.state.environment);
+    let newEnvironment = jsonDeepClone(peek(this.state.environments));
     newEnvironment["Input"] = this.state.input.trim().split(" ");
     newEnvironment["mode"] = "Execute";
     newEnvironment["InputIndex"] = 0;
     newEnvironment["CurWordDef"] = [];
     newEnvironment["CurWord"] = "";
 
-    this.setState({
-      mode: "debug",
-      environment: newEnvironment,
+    this.setState((state, props) => {
+      return {
+        mode: "debug",
+        environments: state.environments.slice(0,-1).concat(newEnvironment),
+      }
     });
   };
 
@@ -215,7 +223,7 @@ class App extends React.Component {
     const inputIsComplete = e["InputIndex"] === e["Input"].length;
     this.setState((state) => {
       return {
-        environment: e,
+        environments: state.environments.slice(0,-1).concat(e),
         mode: inputIsComplete ? "pause" : state.mode,
         input: inputIsComplete ? "" : state.input,
       };
@@ -223,20 +231,23 @@ class App extends React.Component {
   };
 
   handleStepForward = (event) => {
-    console.log(JSON.stringify(this.state.environment));
+    console.log(JSON.stringify(peek(this.state.environments)));
     $.post(
       STEPPER_URL,
-      JSON.stringify(this.state.environment),
+      JSON.stringify(peek(this.state.environments)),
       this.onEnvironmentUpdate,
       "json"
     );
   };
 
+  stepInHandler = (event) => {
+    var word = event.target.value;
+  }
+
   render() {
-    const e = this.state.environment;
+    const e = peek(this.state.environments);
     const curWord = e["Input"].length !== 0 ? e["Input"][e["InputIndex"]] : "";
     const curWordInDict = e["WordDict"].some((w) => w["WordName"] === curWord);
-    console.log(curWordInDict);
 
     return (
       <div id="app-main">
@@ -257,9 +268,10 @@ class App extends React.Component {
                 onForward={this.handleStepForward}
                 curWord={curWord}
                 curWordInDict={curWordInDict}
-                curIndex={this.state.environment["InputIndex"]}
-                curLine={this.state.environment["Input"]}
+                curIndex={e["InputIndex"]}
+                curLine={e["Input"]}
                 isEnabled={this.state.mode === "debug"}
+                stepInHandler={this.stepInHandler}
               />
               <InputForm
                 input={this.state.input}
@@ -271,11 +283,11 @@ class App extends React.Component {
           </div>
           <div className="row">
             <div className="col-4">
-              <Stack stack={this.state.environment["DataStack"]} />
+              <Stack stack={e["DataStack"]} />
             </div>
             <div className="col-8">
               <Dictionary
-                dictionary={this.state.environment["WordDict"]}
+                dictionary={e["WordDict"]}
                 curWord={curWord}
               />
             </div>
