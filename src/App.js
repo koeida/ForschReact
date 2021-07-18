@@ -80,6 +80,7 @@ function Stepper(props) {
       <button
         disabled={!props.isEnabled}
         id="step-back"
+        onClick={props.onBackward}
         className="btn btn-primary"
       >
         <i className="fas fa-chevron-left"></i>
@@ -221,7 +222,7 @@ class App extends React.Component {
 
     this.setState((state, props) => {
       return {
-        history: state.history.concat(newHistoryMoment),
+        history: state.history.slice(0, state.curHistoryIndex + 1).concat(newHistoryMoment),
         curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
@@ -278,7 +279,7 @@ class App extends React.Component {
 
     this.setState(state => {
       return {
-        history: state.history.concat(newHistoryMoment),
+        history: state.history.slice(0,state.curHistoryIndex + 1).concat(newHistoryMoment),
         curHistoryIndex: state.curHistoryIndex + 1,
         input: newInput,
       };
@@ -315,11 +316,19 @@ class App extends React.Component {
 
     this.setState(state => {
       return {
-      input: this.state.input,
-        history: state.history.concat(newHistoryMoment),
+        input: this.state.input,
+        history: state.history.slice(0,state.curHistoryIndex + 1).concat(newHistoryMoment),
         curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
+  };
+
+  handleStepBackward = () => {
+    if (this.state.curHistoryIndex > 0) {
+        this.setState(state => {
+          return {curHistoryIndex: state.curHistoryIndex - 1};
+        });
+    }
   };
 
   render() {
@@ -334,6 +343,7 @@ class App extends React.Component {
       return (
         <Stepper
           key={i}
+          onBackward={this.handleStepBackward}
           onForward={this.handleStepForward}
           curWord={curWord(env)}
           curWordInDict={curWordInDict(env)}
