@@ -1,8 +1,13 @@
 .card {
   background-color: #EEEEEE;
 }
-.current-word {
+
+.word {
   background-color: #333333;
+}
+
+.current-word {
+  background-color: #555555;
 }
 
 .dictionary-current-word {

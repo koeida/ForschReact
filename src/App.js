@@ -1,4 +1,3 @@
-import $ from "jquery";
 import "./App.css";
 import React from "react";
 
@@ -38,7 +37,7 @@ function dropWhile(f, a) {
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
-  const className = "word ms-2 text " + currentClass;
+  const className = "btn btn-important word ms-2 text-white p-0 " + currentClass;
   if (props.isCurrentWord && props.curWordInDict) {
     return (
       <button
@@ -52,9 +51,7 @@ function Word(props) {
     );
   } else {
     return (
-      <div key={props.i} className={className}>
-        {props.wordString}
-      </div>
+      <button key={props.i} className={className} value={props.wordString}>{props.wordString}</button>
     );
   }
 }
@@ -363,7 +360,7 @@ class App extends React.Component {
               <Stack stack={e["DataStack"]} />
             </div>
             <div className="col-8">
-              <Dictionary dictionary={e["WordDict"]} curWord={curWord} />
+              <Dictionary dictionary={e["WordDict"]} curWord={curWord(e)} />
             </div>
           </div>
         </div>

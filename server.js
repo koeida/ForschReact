@@ -10,8 +10,10 @@ app.use(express.json());
 app.listen(8080)
 
 app.post('/step', (req, res) => { 
+  console.log("pong!");
   soap.createClient(config.wsdlUrl, function(err, soapClient){
     if(err) {
+      console.log(err);
       return res.status(500).json(err)
     } else {
       const foo = soapClient.EvalStep({'jsonEnvironment': JSON.stringify(req.body)}, (err, result) => {
