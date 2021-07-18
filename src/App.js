@@ -302,14 +302,22 @@ class App extends React.Component {
 
   stepInHandler = (event) => {
     const word = event.target.value;
-    const newEnv = jsonDeepClone(peek(this.state.environments));
+    const newEnv = jsonDeepClone(peek(this.now().environments));
     newEnv["Input"] = newEnv["WordDict"].find((w) => w["WordName"] === word)[
       "WordText"
     ];
     newEnv["InputIndex"] = 0;
-    this.setState((state, props) => {
+
+    var newHistoryMoment = {
+      environments: this.now().environments.concat(newEnv),
+      mode: this.now().mode,
+    };
+
+    this.setState(state => {
       return {
-        environments: state.environments.concat(newEnv),
+      input: this.state.input,
+        history: state.history.concat(newHistoryMoment),
+        curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
   };
