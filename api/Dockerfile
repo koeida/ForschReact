@@ -1,6 +1,6 @@
 FROM python:3.9
 WORKDIR /usr/src/app
 COPY . .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
-CMD ["flask", "run", "-h", "0.0.0.0"]
+CMD [ "python3", "-m", "flask", "run", "-h", "0.0.0.0", "--port", "9876"]

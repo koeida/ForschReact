@@ -15,7 +15,7 @@ const DEFAULT_ENVIRONMENT = {
   CurWord: "",
 };
 
-const STEPPER_URL = "http://localhost:3000/step";
+const STEPPER_URL = "/step";
 
 function jsonDeepClone(json) {
   return JSON.parse(JSON.stringify(json));
@@ -237,7 +237,6 @@ class App extends React.Component {
     var newMode;
     var newInput;
     if (inputIsComplete && this.state.environments.length === 1) {
-      console.log("here");
       newEnvironments = this.state.environments.slice(0, -1).concat(e);
       newMode = "pause";
       newInput = "";
@@ -277,12 +276,25 @@ class App extends React.Component {
   };
 
   handleStepForward = (event) => {
-    $.post(
-      STEPPER_URL,
-      JSON.stringify(peek(this.state.environments)),
-      this.onEnvironmentUpdate,
-      "json"
-    );
+    const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(peek(this.state.environments))
+    };
+    fetch(STEPPER_URL, requestOptions)
+        .then(response => response.json())
+        .then(data => this.onEnvironmentUpdate(JSON.parse(data.EvalStepResult)))
+    //$.ajax(
+    //   {
+    //    type: 'post',
+    //    url: STEPPER_URL,
+    //    data: JSON.stringify(peek(this.state.environments)),
+    //    xhrFields: { withCredentials: false },
+    //    headers: { },
+    //    success: (e) => console.log("success: " + e),
+    //    error: (e) => console.log("error: " + e),
+    //  }
+    //);
   };
 
   stepInHandler = (event) => {

@@ -1,0 +1,2 @@
+const wsdlUrl = 'http://forsch-service:9000/ForschService.asmx?wsdl'
+module.exports = { wsdlUrl };
