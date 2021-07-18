@@ -35,6 +35,13 @@ function dropWhile(f, a) {
   }
 }
 
+// Non-destructive reverse
+function reversed(a) {
+  var foo = [...a];
+  foo.reverse();
+  return foo;
+}
+
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
   const className =
@@ -262,15 +269,18 @@ class App extends React.Component {
       //If the new environment is at the end of its input, we need to
       //continue destroying environments until we get to one that is
       //unfinished.
-      var remainingEnvironments = dropWhile(
+      var remainingEnvironments = reversed(dropWhile(
         (env) => env["InputIndex"] === env["Input"].length - 1,
-        curEnvironments.reverse()
-      ).reverse();
-
+        reversed(curEnvironments)
+      ));
+      
       if (remainingEnvironments.length === 0) {
         newMode = "pause";
         newInput = "";
-        newEnvironments = [e];
+        let newEnv = jsonDeepClone(e);      
+        newEnv["Input"] = []
+        newEnv["InputIndex"] = 0;
+        newEnvironments = [newEnv];
       } else {
         const newHeadEnv = peek(remainingEnvironments);
         newHeadEnv["DataStack"] = e["DataStack"];
