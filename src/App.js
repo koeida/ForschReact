@@ -255,16 +255,46 @@ class App extends React.Component {
     });
   };
 
+
+  // All of the computations in every 
+  // stepper have completed, so
+  // we squash down to a bare environment 
+  // awaiting further user input.
+  getFinishedMoment = e => {
+    const newEnv = jsonDeepClone(e);      
+    newEnv["Input"] = []
+    newEnv["InputIndex"] = 0;
+
+    return {
+      mode: "pause",
+      environments: [newEnv],
+    };
+  };
+
+  // Some steppers remain unfinished,
+  // so we generate a moment containing only those
+  // remaining steppers.
+  getCollapsedMoment = (e, remainingEnvironments) => {
+    const newHeadEnv =  jsonDeepClone(peek(remainingEnvironments));
+    newHeadEnv["DataStack"] = e["DataStack"];
+    newHeadEnv["InputIndex"] += 1;
+    return {
+      mode: this.now().mode,
+      environments: remainingEnvironments.slice(0, -1).concat(newHeadEnv),
+    };
+  };
+
   onEnvironmentUpdate = (e) => {
     const inputIsComplete = e["InputIndex"] === e["Input"].length;
     const curEnvironments = this.now().environments;
-    var newEnvironments;
-    var newMode;
+    var newMoment;
     var newInput;
     if (inputIsComplete && curEnvironments.length === 1) {
-      newEnvironments = curEnvironments.slice(0, -1).concat(e);
-      newMode = "pause";
       newInput = "";
+      newMoment = {
+        mode: "pause",
+        environments: curEnvironments.slice(0, -1).concat(e),
+      };
     } else if (inputIsComplete && curEnvironments.length > 1) {
       //If the new environment is at the end of its input, we need to
       //continue destroying environments until we get to one that is
@@ -275,37 +305,25 @@ class App extends React.Component {
       ));
       
       if (remainingEnvironments.length === 0) {
-        newMode = "pause";
         newInput = "";
-        let newEnv = jsonDeepClone(e);      
-        newEnv["Input"] = []
-        newEnv["InputIndex"] = 0;
-        newEnvironments = [newEnv];
+        newMoment = this.getFinishedMoment(e)
       } else {
-        const newHeadEnv = peek(remainingEnvironments);
-        newHeadEnv["DataStack"] = e["DataStack"];
-        newHeadEnv["InputIndex"] += 1;
-        newEnvironments = remainingEnvironments.slice(0, -1).concat(newHeadEnv);
         newInput = this.state.input;
-        newMode = this.now().mode;
+        newMoment = this.getCollapsedMoment(e, remainingEnvironments);
       }
     } else if (!inputIsComplete) {
-      newEnvironments = curEnvironments.slice(0, -1).concat(e);
-      newMode = this.now().mode;
       newInput = this.state.input;
+      newMoment = {
+        mode: this.now().mode,
+        environments: curEnvironments.slice(0, -1).concat(e),
+      };
     }
 
-    const newHistoryMoment = {
-      mode: newMode,
-      environments: newEnvironments,
-    };
-
-    console.log("foo: " + (this.state.curHistoryIndex + 1));
 
     this.setState({
         history: this.state.history
           .slice(0, this.state.curHistoryIndex + 1)
-          .concat(newHistoryMoment),
+          .concat(newMoment),
         curHistoryIndex: this.state.curHistoryIndex + 1,
         input: newInput,
     });
@@ -367,7 +385,6 @@ class App extends React.Component {
   };
 
   render() {
-    console.log(this.state.curHistoryIndex);
     const e = peek(this.now().environments);
     const curWord = (env) =>
       env["Input"].length !== 0 ? env["Input"][env["InputIndex"]] : "";
