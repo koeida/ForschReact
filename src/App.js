@@ -395,6 +395,13 @@ class App extends React.Component {
         </div>
         <div id="body-container" className="container">
           <div className="row d-flex justify-content-center">
+          <div className="row">
+            <HistorySlider
+              historySliderChangeHandler={this.historySliderChangeHandler}
+              historyMaxIndex={this.state.history.length - 1}
+              curHistoryIndex={this.state.curHistoryIndex}
+            />
+          </div>
             <div className="">
               {steppers}
               <InputForm
@@ -404,13 +411,6 @@ class App extends React.Component {
                 onDebug={this.handleDebuggerClick}
               />
             </div>
-          </div>
-          <div className="row">
-            <HistorySlider
-              historySliderChangeHandler={this.historySliderChangeHandler}
-              historyMaxIndex={this.state.history.length - 1}
-              curHistoryIndex={this.state.curHistoryIndex}
-            />
           </div>
           <div className="row">
             <div className="col-4">
