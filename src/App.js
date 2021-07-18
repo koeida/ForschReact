@@ -207,8 +207,7 @@ class App extends React.Component {
 
   handleDebuggerClick = (e) => {
     e.preventDefault();
-    const now = this.state.history[this.state.curHistoryIndex];
-    let newEnvironment = jsonDeepClone(peek(now.environments));
+    let newEnvironment = jsonDeepClone(peek(this.now().environments));
     newEnvironment["Input"] = this.state.input.trim().split(" ");
     newEnvironment["mode"] = "Execute";
     newEnvironment["InputIndex"] = 0;
@@ -217,7 +216,7 @@ class App extends React.Component {
 
     const newHistoryMoment = {
       mode: "debug",
-      environments: now.environments.slice(0, -1).concat(newEnvironment),
+      environments: this.now().environments.slice(0, -1).concat(newEnvironment),
     }
 
     this.setState((state, props) => {
@@ -236,20 +235,21 @@ class App extends React.Component {
 
   onEnvironmentUpdate = (e) => {
     const inputIsComplete = e["InputIndex"] === e["Input"].length;
+    const curEnvironments = this.now().environments;
     var newEnvironments;
     var newMode;
     var newInput;
-    if (inputIsComplete && this.state.environments.length === 1) {
-      newEnvironments = this.state.environments.slice(0, -1).concat(e);
+    if (inputIsComplete && curEnvironments.length === 1) {
+      newEnvironments = curEnvironments.slice(0, -1).concat(e);
       newMode = "pause";
       newInput = "";
-    } else if (inputIsComplete && this.state.environments.length > 1) {
+    } else if (inputIsComplete && curEnvironments.length > 1) {
       //If the new environment is at the end of its input, we need to
       //continue destroying environments until we get to one that is
       //unfinished.
       var remainingEnvironments = dropWhile(
         (env) => env["InputIndex"] === env["Input"].length - 1,
-        this.state.environments.reverse()
+        curEnvironments.reverse()
       ).reverse();
 
       if (remainingEnvironments.length === 0) {
@@ -262,27 +262,38 @@ class App extends React.Component {
         newHeadEnv["InputIndex"] += 1;
         newEnvironments = remainingEnvironments.slice(0, -1).concat(newHeadEnv);
         newInput = this.state.input;
-        newMode = this.state.mode;
+        newMode = this.now().mode;
       }
 
     } else if (!inputIsComplete) {
-      newEnvironments = this.state.environments.slice(0, -1).concat(e);
-      newMode = this.state.mode;
+      newEnvironments = curEnvironments.slice(0, -1).concat(e);
+      newMode = this.now().mode;
       newInput = this.state.input;
     }
 
-    this.setState({
-      environments: newEnvironments,
+    const newHistoryMoment = {
       mode: newMode,
-      input: newInput,
+      environments: newEnvironments,
+    };
+
+    this.setState(state => {
+      return {
+        history: state.history.concat(newHistoryMoment),
+        curHistoryIndex: state.curHistoryIndex + 1,
+        input: newInput,
+      };
     });
+  };
+
+  now = () => {
+    return this.state.history[this.state.curHistoryIndex];
   };
 
   handleStepForward = (event) => {
     const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(peek(this.state.environments))
+        body: JSON.stringify(peek(this.now().environments))
     };
     fetch(STEPPER_URL, requestOptions)
         .then(response => response.json())
@@ -304,15 +315,14 @@ class App extends React.Component {
   };
 
   render() {
-    const now = this.state.history[this.state.curHistoryIndex];
-    const e = peek(now.environments);
+    const e = peek(this.now().environments);
     const curWord = (env) =>
       env["Input"].length !== 0 ? env["Input"][env["InputIndex"]] : "";
     const curWordInDict = (env) =>
       env["WordDict"].some((w) => w["WordName"] === curWord(env));
-    const steppers = now.environments.map((env, i) => {
+    const steppers = this.now().environments.map((env, i) => {
       const isEnabled =
-        i === now.environments.length - 1 && now.mode === "debug";
+        i === this.now().environments.length - 1 && this.now().mode === "debug";
       return (
         <Stepper
           key={i}
@@ -346,7 +356,7 @@ class App extends React.Component {
               <InputForm
                 input={this.state.input}
                 handleChange={this.handleInputChange}
-                isEnabled={now.mode !== "debug"}
+                isEnabled={this.now().mode !== "debug"}
                 onDebug={this.handleDebuggerClick}
               />
             </div>
