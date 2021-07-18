@@ -199,25 +199,31 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      mode: "pause",
       input: "1 ADD2 ADD2",
-      environments: [DEFAULT_ENVIRONMENT],
+      curHistoryIndex: 0,
+      history: [{mode: "pause", environments:[DEFAULT_ENVIRONMENT]}],
     };
   }
 
   handleDebuggerClick = (e) => {
     e.preventDefault();
-    let newEnvironment = jsonDeepClone(peek(this.state.environments));
+    const now = this.state.history[this.state.curHistoryIndex];
+    let newEnvironment = jsonDeepClone(peek(now.environments));
     newEnvironment["Input"] = this.state.input.trim().split(" ");
     newEnvironment["mode"] = "Execute";
     newEnvironment["InputIndex"] = 0;
     newEnvironment["CurWordDef"] = [];
     newEnvironment["CurWord"] = "";
 
+    const newHistoryMoment = {
+      mode: "debug",
+      environments: now.environments.slice(0, -1).concat(newEnvironment),
+    }
+
     this.setState((state, props) => {
       return {
-        mode: "debug",
-        environments: state.environments.slice(0, -1).concat(newEnvironment),
+        history: state.history.concat(newHistoryMoment),
+        curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
   };
@@ -281,17 +287,6 @@ class App extends React.Component {
     fetch(STEPPER_URL, requestOptions)
         .then(response => response.json())
         .then(data => this.onEnvironmentUpdate(JSON.parse(data.EvalStepResult)))
-    //$.ajax(
-    //   {
-    //    type: 'post',
-    //    url: STEPPER_URL,
-    //    data: JSON.stringify(peek(this.state.environments)),
-    //    xhrFields: { withCredentials: false },
-    //    headers: { },
-    //    success: (e) => console.log("success: " + e),
-    //    error: (e) => console.log("error: " + e),
-    //  }
-    //);
   };
 
   stepInHandler = (event) => {
@@ -309,14 +304,15 @@ class App extends React.Component {
   };
 
   render() {
-    const e = peek(this.state.environments);
+    const now = this.state.history[this.state.curHistoryIndex];
+    const e = peek(now.environments);
     const curWord = (env) =>
       env["Input"].length !== 0 ? env["Input"][env["InputIndex"]] : "";
     const curWordInDict = (env) =>
       env["WordDict"].some((w) => w["WordName"] === curWord(env));
-    const steppers = this.state.environments.map((env, i) => {
+    const steppers = now.environments.map((env, i) => {
       const isEnabled =
-        i === this.state.environments.length - 1 && this.state.mode === "debug";
+        i === now.environments.length - 1 && now.mode === "debug";
       return (
         <Stepper
           key={i}
@@ -350,7 +346,7 @@ class App extends React.Component {
               <InputForm
                 input={this.state.input}
                 handleChange={this.handleInputChange}
-                isEnabled={this.state.mode !== "debug"}
+                isEnabled={now.mode !== "debug"}
                 onDebug={this.handleDebuggerClick}
               />
             </div>
