@@ -37,7 +37,8 @@ function dropWhile(f, a) {
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
-  const className = "btn btn-important word ms-2 text-white p-0 " + currentClass;
+  const className =
+    "btn btn-important word ms-2 text-white p-0 " + currentClass;
   if (props.isCurrentWord && props.curWordInDict) {
     return (
       <button
@@ -51,9 +52,27 @@ function Word(props) {
     );
   } else {
     return (
-      <button key={props.i} className={className} value={props.wordString}>{props.wordString}</button>
+      <button key={props.i} className={className} value={props.wordString}>
+        {props.wordString}
+      </button>
     );
   }
+}
+
+function HistorySlider(props) {
+  return (
+    <div className="range">
+      <input
+        onChange={props.historySliderChangeHandler}
+        type="range"
+        className="form-range"
+        min="0"
+        max={props.historyMaxIndex}
+        value={props.curHistoryIndex}
+        id="history-slider"
+      />
+    </div>
+  );
 }
 
 function Stepper(props) {
@@ -120,13 +139,6 @@ function InputForm(props) {
           disabled={!props.isEnabled}
         >
           <i className="fas fa-bug me-2"></i>Debug
-        </button>
-        <button
-          disabled={!props.isEnabled}
-          id="execute-button"
-          className="btn btn-primary ms-3"
-        >
-          <i className="fas fa-play me-2"></i>Execute
         </button>
       </div>
     </form>
@@ -202,7 +214,7 @@ class App extends React.Component {
     this.state = {
       input: "1 ADD2 ADD2",
       curHistoryIndex: 0,
-      history: [{mode: "pause", environments:[DEFAULT_ENVIRONMENT]}],
+      history: [{ mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
     };
   }
 
@@ -218,11 +230,13 @@ class App extends React.Component {
     const newHistoryMoment = {
       mode: "debug",
       environments: this.now().environments.slice(0, -1).concat(newEnvironment),
-    }
+    };
 
     this.setState((state, props) => {
       return {
-        history: state.history.slice(0, state.curHistoryIndex + 1).concat(newHistoryMoment),
+        history: state.history
+          .slice(0, state.curHistoryIndex + 1)
+          .concat(newHistoryMoment),
         curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
@@ -254,8 +268,8 @@ class App extends React.Component {
       ).reverse();
 
       if (remainingEnvironments.length === 0) {
-        newMode = "pause"
-        newInput = ""
+        newMode = "pause";
+        newInput = "";
         newEnvironments = [e];
       } else {
         const newHeadEnv = peek(remainingEnvironments);
@@ -265,7 +279,6 @@ class App extends React.Component {
         newInput = this.state.input;
         newMode = this.now().mode;
       }
-
     } else if (!inputIsComplete) {
       newEnvironments = curEnvironments.slice(0, -1).concat(e);
       newMode = this.now().mode;
@@ -277,12 +290,14 @@ class App extends React.Component {
       environments: newEnvironments,
     };
 
-    this.setState(state => {
-      return {
-        history: state.history.slice(0,state.curHistoryIndex + 1).concat(newHistoryMoment),
-        curHistoryIndex: state.curHistoryIndex + 1,
+    console.log("foo: " + (this.state.curHistoryIndex + 1));
+
+    this.setState({
+        history: this.state.history
+          .slice(0, this.state.curHistoryIndex + 1)
+          .concat(newHistoryMoment),
+        curHistoryIndex: this.state.curHistoryIndex + 1,
         input: newInput,
-      };
     });
   };
 
@@ -292,13 +307,15 @@ class App extends React.Component {
 
   handleStepForward = (event) => {
     const requestOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(peek(this.now().environments))
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(peek(this.now().environments)),
     };
     fetch(STEPPER_URL, requestOptions)
-        .then(response => response.json())
-        .then(data => this.onEnvironmentUpdate(JSON.parse(data.EvalStepResult)))
+      .then((response) => response.json())
+      .then((data) =>
+        this.onEnvironmentUpdate(JSON.parse(data.EvalStepResult))
+      );
   };
 
   stepInHandler = (event) => {
@@ -314,10 +331,12 @@ class App extends React.Component {
       mode: this.now().mode,
     };
 
-    this.setState(state => {
+    this.setState((state) => {
       return {
         input: this.state.input,
-        history: state.history.slice(0,state.curHistoryIndex + 1).concat(newHistoryMoment),
+        history: state.history
+          .slice(0, state.curHistoryIndex + 1)
+          .concat(newHistoryMoment),
         curHistoryIndex: state.curHistoryIndex + 1,
       };
     });
@@ -325,13 +344,20 @@ class App extends React.Component {
 
   handleStepBackward = () => {
     if (this.state.curHistoryIndex > 0) {
-        this.setState(state => {
-          return {curHistoryIndex: state.curHistoryIndex - 1};
-        });
+      this.setState((state) => {
+        return { curHistoryIndex: state.curHistoryIndex - 1 };
+      });
     }
   };
 
+  historySliderChangeHandler = (e) => {
+    this.setState((state) => {
+      return { curHistoryIndex: parseInt(e.target.value) };
+    });
+  };
+
   render() {
+    console.log(this.state.curHistoryIndex);
     const e = peek(this.now().environments);
     const curWord = (env) =>
       env["Input"].length !== 0 ? env["Input"][env["InputIndex"]] : "";
@@ -378,6 +404,13 @@ class App extends React.Component {
                 onDebug={this.handleDebuggerClick}
               />
             </div>
+          </div>
+          <div className="row">
+            <HistorySlider
+              historySliderChangeHandler={this.historySliderChangeHandler}
+              historyMaxIndex={this.state.history.length - 1}
+              curHistoryIndex={this.state.curHistoryIndex}
+            />
           </div>
           <div className="row">
             <div className="col-4">
