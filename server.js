@@ -10,7 +10,6 @@ app.use(express.json());
 app.listen(8080)
 
 app.post('/step', (req, res) => { 
-  console.log("pong!");
   soap.createClient(config.wsdlUrl, function(err, soapClient){
     if(err) {
       console.log(err);

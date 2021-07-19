@@ -4,14 +4,32 @@ import React from "react";
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
   WordDict: [
-    { WordName: "ADD1", IsImmediate: false, WordText: ["1", "+"] },
-    { WordName: "ADD2", IsImmediate: false, WordText: ["ADD1", "ADD1"] },
+    {
+      WordName: "ADD1",
+      IsImmediate: false,
+      WordText: ["1", "+"],
+    },
+    {
+      WordName: "ADD2",
+      IsImmediate: false,
+      WordText: ["ADD1", "ADD1"],
+    },
+    {
+      WordName: "BEGIN",
+      IsImmediate: true,
+      WordText: ["HERE"],
+    },
+    {
+      WordName: "UNTIL",
+      IsImmediate: true,
+      WordText: ["[", "BRANCH?", "]", ","],
+    },
   ],
   Input: [],
   InputIndex: 0,
   mode: "Execute",
-  CurWordDef: [],
-  CurWord: "",
+  CurWordDef: null,
+  CurWord: null,
 };
 
 const STEPPER_URL = "/step";
@@ -219,7 +237,7 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      input: "1 ADD2 ADD2",
+      input: ": LOOPER 0 BEGIN 1 + DUP 3 = UNTIL ;",
       curHistoryIndex: 0,
       history: [{ mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
     };
@@ -255,14 +273,13 @@ class App extends React.Component {
     });
   };
 
-
-  // All of the computations in every 
+  // All of the computations in every
   // stepper have completed, so
-  // we squash down to a bare environment 
+  // we squash down to a bare environment
   // awaiting further user input.
-  getFinishedMoment = e => {
-    const newEnv = jsonDeepClone(e);      
-    newEnv["Input"] = []
+  getFinishedMoment = (e) => {
+    const newEnv = jsonDeepClone(e);
+    newEnv["Input"] = [];
     newEnv["InputIndex"] = 0;
 
     return {
@@ -275,7 +292,7 @@ class App extends React.Component {
   // so we generate a moment containing only those
   // remaining steppers.
   getCollapsedMoment = (e, remainingEnvironments) => {
-    const newHeadEnv =  jsonDeepClone(peek(remainingEnvironments));
+    const newHeadEnv = jsonDeepClone(peek(remainingEnvironments));
     newHeadEnv["DataStack"] = e["DataStack"];
     newHeadEnv["InputIndex"] += 1;
     return {
@@ -285,8 +302,8 @@ class App extends React.Component {
   };
 
   onEnvironmentUpdate = (e) => {
-    const inputIsComplete = e["InputIndex"] === e["Input"].length;
-    const curEnvironments = this.now().environments;
+    const inputIsComplete = e["InputIndex"] >= e["Input"].length;
+    const curEnvironments = this.now().environments.slice(0, -1).concat(e);
     var newMoment;
     var newInput;
     if (inputIsComplete && curEnvironments.length === 1) {
@@ -299,14 +316,16 @@ class App extends React.Component {
       //If the new environment is at the end of its input, we need to
       //continue destroying environments until we get to one that is
       //unfinished.
-      var remainingEnvironments = reversed(dropWhile(
-        (env) => env["InputIndex"] === env["Input"].length - 1,
-        reversed(curEnvironments)
-      ));
-      
+      var remainingEnvironments = reversed(
+        dropWhile(
+          (env) => env["InputIndex"] >= env["Input"].length - 1,
+          reversed(curEnvironments)
+        )
+      );
+
       if (remainingEnvironments.length === 0) {
         newInput = "";
-        newMoment = this.getFinishedMoment(e)
+        newMoment = this.getFinishedMoment(e);
       } else {
         newInput = this.state.input;
         newMoment = this.getCollapsedMoment(e, remainingEnvironments);
@@ -315,17 +334,16 @@ class App extends React.Component {
       newInput = this.state.input;
       newMoment = {
         mode: this.now().mode,
-        environments: curEnvironments.slice(0, -1).concat(e),
+        environments: curEnvironments,
       };
     }
 
-
     this.setState({
-        history: this.state.history
-          .slice(0, this.state.curHistoryIndex + 1)
-          .concat(newMoment),
-        curHistoryIndex: this.state.curHistoryIndex + 1,
-        input: newInput,
+      history: this.state.history
+        .slice(0, this.state.curHistoryIndex + 1)
+        .concat(newMoment),
+      curHistoryIndex: this.state.curHistoryIndex + 1,
+      input: newInput,
     });
   };
 
@@ -422,13 +440,13 @@ class App extends React.Component {
         </div>
         <div id="body-container" className="container">
           <div className="row d-flex justify-content-center">
-          <div className="row">
-            <HistorySlider
-              historySliderChangeHandler={this.historySliderChangeHandler}
-              historyMaxIndex={this.state.history.length - 1}
-              curHistoryIndex={this.state.curHistoryIndex}
-            />
-          </div>
+            <div className="row">
+              <HistorySlider
+                historySliderChangeHandler={this.historySliderChangeHandler}
+                historyMaxIndex={this.state.history.length - 1}
+                curHistoryIndex={this.state.curHistoryIndex}
+              />
+            </div>
             <div className="">
               {steppers}
               <InputForm
