@@ -1,5 +1,6 @@
 import "./App.css";
 import React from "react";
+import _ from "underscore-contrib";
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
@@ -41,24 +42,10 @@ function peek(a) {
   return a.slice(-1)[0];
 }
 
-function dropWhile(f, a) {
-  if (a.length === 0) {
-    return [];
-  }
-
-  if (!f(a[0])) {
-    return a;
-  } else {
-    return dropWhile(f, a.slice(1));
-  }
-}
-
 // Non-destructive reverse
-function reversed(a) {
-  var foo = [...a];
-  foo.reverse();
-  return foo;
-}
+_.mixin({
+  reversed: (a)  => [...a].reverse(),
+});
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
@@ -316,12 +303,11 @@ class App extends React.Component {
       //If the new environment is at the end of its input, we need to
       //continue destroying environments until we get to one that is
       //unfinished.
-      var remainingEnvironments = reversed(
-        dropWhile(
-          (env) => env["InputIndex"] >= env["Input"].length - 1,
-          reversed(curEnvironments)
-        )
-      );
+      var remainingEnvironments = _.chain(curEnvironments)
+        .reversed()
+        .dropWhile((env) => env["InputIndex"] >= env["Input"].length - 1)
+        .reversed()
+        .value();
 
       if (remainingEnvironments.length === 0) {
         newInput = "";
