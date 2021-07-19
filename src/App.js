@@ -278,58 +278,46 @@ class App extends React.Component {
   // Some steppers remain unfinished,
   // so we generate a moment containing only those
   // remaining steppers.
-  getCollapsedMoment = (e, remainingEnvironments) => {
+  getCollapsedMoment = (newDataStack, remainingEnvironments) => {
     const newHeadEnv = jsonDeepClone(peek(remainingEnvironments));
-    newHeadEnv["DataStack"] = e["DataStack"];
+    newHeadEnv["DataStack"] = newDataStack;
     newHeadEnv["InputIndex"] += 1;
     return {
-      mode: this.now().mode,
+      mode: "debug",
       environments: remainingEnvironments.slice(0, -1).concat(newHeadEnv),
     };
+  };
+
+  //Drop all environments that have reached the end of their input.
+  //If all environments have reached the end, leave the final environment
+  //in place devoid of input.
+  collapseEnvironments = (curEnvironments) => {
+    const finalEnvironment = curEnvironments.slice(-1)[0];
+    const remainingEnvironments = _.chain(curEnvironments)
+      .reversed()
+      .dropWhile((env) => env["InputIndex"] >= env["Input"].length - 1)
+      .reversed()
+      .value();
+    if (remainingEnvironments.length === 0) {
+      return this.getFinishedMoment(finalEnvironment)
+    } else {
+      return this.getCollapsedMoment(finalEnvironment["DataStack"], remainingEnvironments);
+    }
   };
 
   onEnvironmentUpdate = (e) => {
     const inputIsComplete = e["InputIndex"] >= e["Input"].length;
     const curEnvironments = this.now().environments.slice(0, -1).concat(e);
-    var newMoment;
-    var newInput;
-    if (inputIsComplete && curEnvironments.length === 1) {
-      newInput = "";
-      newMoment = {
-        mode: "pause",
-        environments: curEnvironments.slice(0, -1).concat(e),
-      };
-    } else if (inputIsComplete && curEnvironments.length > 1) {
-      //If the new environment is at the end of its input, we need to
-      //continue destroying environments until we get to one that is
-      //unfinished.
-      var remainingEnvironments = _.chain(curEnvironments)
-        .reversed()
-        .dropWhile((env) => env["InputIndex"] >= env["Input"].length - 1)
-        .reversed()
-        .value();
-
-      if (remainingEnvironments.length === 0) {
-        newInput = "";
-        newMoment = this.getFinishedMoment(e);
-      } else {
-        newInput = this.state.input;
-        newMoment = this.getCollapsedMoment(e, remainingEnvironments);
-      }
-    } else if (!inputIsComplete) {
-      newInput = this.state.input;
-      newMoment = {
-        mode: this.now().mode,
-        environments: curEnvironments,
-      };
-    }
+    const newMoment = (inputIsComplete) 
+      ? this.collapseEnvironments(curEnvironments, this.state.input)
+      : { mode: "debug", environments: curEnvironments };
 
     this.setState({
       history: this.state.history
         .slice(0, this.state.curHistoryIndex + 1)
         .concat(newMoment),
       curHistoryIndex: this.state.curHistoryIndex + 1,
-      input: newInput,
+      input: "",
     });
   };
 
