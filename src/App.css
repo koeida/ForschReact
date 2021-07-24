@@ -43,3 +43,8 @@
   margin-right: auto;
   width: 75%;
 }
+
+canvas {
+  border: 1px solid lightgrey;
+  height:350px;
+}

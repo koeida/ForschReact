@@ -1,19 +1,35 @@
 import "./App.css";
 import React from "react";
-import {last, compose, equals, prop, find, reverse, pipe, dropWhile} from "ramda";
+import {startsWith, compose, equals, prop, find, pipe} from "ramda";
+import {getNewMoment, jsonDeepClone, peek} from "./utils.js";
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
   WordDict: [
     {
-      WordName: "ADD1",
+      WordName: "fillRect",
       IsImmediate: false,
-      WordText: ["1", "+"],
+      WordText: 'ctx.fillRect( CALLF4'.split(" "),
     },
     {
-      WordName: "ADD2",
+      WordName: "CALLF1",
       IsImmediate: false,
-      WordText: ["ADD1", "ADD1"],
+      WordText: '" SWAP " + ) " + .'.split(" "),
+    },
+    {
+      WordName: "CALLF2",
+      IsImmediate: false,
+      WordText: '" ROT " + ,_ " + SWAP " + ) " + .'.split(" "), 
+    },
+    {
+      WordName: "CALLF3",
+      IsImmediate: false,
+      WordText: '" 3 PICK " + ,_ " + ROT " + ,_ " + SWAP " + ) " + . DROP'.split(" "),
+    },
+    {
+      WordName: "CALLF4",
+      IsImmediate: false,
+      WordText: '" 4 PICK " + ,_ " + 3 PICK " + ,_ " + 2 PICK " + ,_ " + 1 PICK " + ) + . . . . .'.split(" "),
     },
     {
       WordName: "BEGIN",
@@ -31,16 +47,10 @@ const DEFAULT_ENVIRONMENT = {
   mode: "Execute",
   CurWordDef: null,
   CurWord: null,
+  Output: "",
 };
 
 const STEPPER_URL = "/step";
-
-function jsonDeepClone(json) {
-  return JSON.parse(JSON.stringify(json));
-}
-function peek(a) {
-  return a.slice(-1)[0];
-}
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
@@ -220,13 +230,40 @@ function Stack(props) {
   );
 }
 
+class Canvas extends React.Component {
+  componentDidMount() {
+  }
+
+  componentDidUpdate() {
+    const canvas = this.refs.canvas;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    for(const s of this.props.output) {
+      if(startsWith('ctx.', s)) {
+        eval(s)  
+      }
+    }
+    
+    eval('ctx.font = "18pt Mono";');
+    eval('ctx.fillText("baruch hashem", 0, 75)');
+  }
+
+  render() {
+    return (
+      <div className="row justify-content-center">
+        <canvas ref="canvas"/>
+      </div>
+    )
+  }
+}
+
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      input: ": LOOPER 0 BEGIN 1 + DUP 3 = UNTIL ;",
+      input: "a b c d forward(",
       curHistoryIndex: 0,
-      history: [{ mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
+      history: [{ output: [], mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
     };
   }
 
@@ -241,6 +278,7 @@ class App extends React.Component {
 
     const newHistoryMoment = {
       mode: "debug",
+      output: this.now().output,
       environments: this.now().environments.slice(0, -1).concat(newEnvironment),
     };
 
@@ -260,59 +298,10 @@ class App extends React.Component {
     });
   };
 
-  // All of the computations in every
-  // stepper have completed, so
-  // we squash down to a bare environment
-  // awaiting further user input.
-  getFinishedMoment = (e) => {
-    const newEnv = jsonDeepClone(e);
-    newEnv["Input"] = [];
-    newEnv["InputIndex"] = 0;
-    newEnv["mode"] = "Execute";
-
-    return {
-      mode: "pause",
-      environments: [newEnv],
-    };
-  };
-
-  // Some steppers remain unfinished,
-  // so we generate a moment containing only those
-  // remaining steppers.
-  getCollapsedMoment = (finalEnvironment, remainingEnvironments) => {
-    const newHeadEnv = jsonDeepClone(peek(remainingEnvironments));
-    newHeadEnv["DataStack"] = finalEnvironment["DataStack"];
-    newHeadEnv["WordDict"] = finalEnvironment["WordDict"]
-    newHeadEnv["InputIndex"] += 1;
-    newHeadEnv["mode"] = last(remainingEnvironments)["mode"];
-    return {
-      mode: "debug",
-      environments: remainingEnvironments.slice(0, -1).concat(newHeadEnv),
-    };
-  };
-
-  //Drop all environments that have reached the end of their input.
-  //If all environments have reached the end, leave the final environment
-  //in place devoid of input.
-  collapseEnvironments = (curEnvironments) => {
-    const finalEnvironment = curEnvironments.slice(-1)[0];
-    const remainingEnvironments = pipe(
-      reverse,
-      dropWhile(env => env["InputIndex"] >= env["Input"].length - 1),
-      reverse)(curEnvironments);
-    if (remainingEnvironments.length === 0) {
-      return this.getFinishedMoment(finalEnvironment)
-    } else {
-      return this.getCollapsedMoment(finalEnvironment, remainingEnvironments);
-    }
-  };
-
+  // Update state in response to receipt of new environment from
+  // Forsch web service.
   onEnvironmentUpdate = (e) => {
-    const inputIsComplete = e["InputIndex"] >= e["Input"].length;
-    const curEnvironments = this.now().environments.slice(0, -1).concat(e);
-    const newMoment = (inputIsComplete) 
-      ? this.collapseEnvironments(curEnvironments, this.state.input)
-      : { mode: "debug", environments: curEnvironments };
+    const newMoment = getNewMoment(this.now(), e, this.state.input)
 
     this.setState({
       history: this.state.history
@@ -352,6 +341,7 @@ class App extends React.Component {
     var newHistoryMoment = {
       environments: this.now().environments.concat(newEnv),
       mode: this.now().mode,
+      output: this.now().output,
     };
 
     this.setState((state) => {
@@ -417,6 +407,7 @@ class App extends React.Component {
           </header>
         </div>
         <div id="body-container" className="container">
+          <Canvas output={this.now().output} />
           <div className="row d-flex justify-content-center">
             <div className="row">
               <HistorySlider
