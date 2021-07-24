@@ -1,6 +1,6 @@
 import "./App.css";
 import React from "react";
-import _ from "underscore-contrib";
+import {last, compose, equals, prop, find, reverse, pipe, dropWhile} from "ramda";
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
@@ -42,11 +42,6 @@ function peek(a) {
   return a.slice(-1)[0];
 }
 
-// Non-destructive reverse
-_.mixin({
-  reversed: (a)  => [...a].reverse(),
-});
-
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
   const className =
@@ -55,7 +50,7 @@ function Word(props) {
     return (
       <button
         className="btn btn-success p-0 ms-2"
-        onClick={props.stepInHandler}
+        onClick={props.handleStepIn}
         value={props.wordString}
         key={props.i}
       >
@@ -96,7 +91,7 @@ function Stepper(props) {
         curIndex={props.curIndex}
         isCurrentWord={isCurrentWord}
         curWordInDict={props.curWordInDict}
-        stepInHandler={props.stepInHandler}
+        handleStepIn={props.handleStepIn}
         wordString={w}
       />
     );
@@ -104,7 +99,12 @@ function Stepper(props) {
 
   const currentLineClasses =
     "flex-grow-1 form-control " +
-    (props.isEnabled ? "bg-dark" : "bg-secondary");
+    (props.isEnabled ? "bg-dark " : "bg-secondary ") + 
+    (props.isCompileMode ? "compile-mode" : "");
+
+  const stepperClass = 
+    "btn " + 
+    (props.isCompileMode ? "btn-warning" : "btn-primary");
 
   return (
     <div id="stepper" className="d-flex flex-row my-2">
@@ -112,7 +112,7 @@ function Stepper(props) {
         disabled={!props.isEnabled}
         id="step-back"
         onClick={props.onBackward}
-        className="btn btn-primary"
+        className={stepperClass}
       >
         <i className="fas fa-chevron-left"></i>
       </button>
@@ -123,7 +123,7 @@ function Stepper(props) {
       </div>
       <button
         id="step-forward"
-        className="btn btn-primary"
+        className={stepperClass}
         onClick={props.onForward}
         disabled={!props.isEnabled}
       >
@@ -268,6 +268,7 @@ class App extends React.Component {
     const newEnv = jsonDeepClone(e);
     newEnv["Input"] = [];
     newEnv["InputIndex"] = 0;
+    newEnv["mode"] = "Execute";
 
     return {
       mode: "pause",
@@ -278,10 +279,12 @@ class App extends React.Component {
   // Some steppers remain unfinished,
   // so we generate a moment containing only those
   // remaining steppers.
-  getCollapsedMoment = (newDataStack, remainingEnvironments) => {
+  getCollapsedMoment = (finalEnvironment, remainingEnvironments) => {
     const newHeadEnv = jsonDeepClone(peek(remainingEnvironments));
-    newHeadEnv["DataStack"] = newDataStack;
+    newHeadEnv["DataStack"] = finalEnvironment["DataStack"];
+    newHeadEnv["WordDict"] = finalEnvironment["WordDict"]
     newHeadEnv["InputIndex"] += 1;
+    newHeadEnv["mode"] = last(remainingEnvironments)["mode"];
     return {
       mode: "debug",
       environments: remainingEnvironments.slice(0, -1).concat(newHeadEnv),
@@ -293,15 +296,14 @@ class App extends React.Component {
   //in place devoid of input.
   collapseEnvironments = (curEnvironments) => {
     const finalEnvironment = curEnvironments.slice(-1)[0];
-    const remainingEnvironments = _.chain(curEnvironments)
-      .reversed()
-      .dropWhile((env) => env["InputIndex"] >= env["Input"].length - 1)
-      .reversed()
-      .value();
+    const remainingEnvironments = pipe(
+      reverse,
+      dropWhile(env => env["InputIndex"] >= env["Input"].length - 1),
+      reverse)(curEnvironments);
     if (remainingEnvironments.length === 0) {
       return this.getFinishedMoment(finalEnvironment)
     } else {
-      return this.getCollapsedMoment(finalEnvironment["DataStack"], remainingEnvironments);
+      return this.getCollapsedMoment(finalEnvironment, remainingEnvironments);
     }
   };
 
@@ -335,15 +337,16 @@ class App extends React.Component {
       .then((response) => response.json())
       .then((data) =>
         this.onEnvironmentUpdate(JSON.parse(data.EvalStepResult))
-      );
+      )
+      .catch((error) => console.log(error));
   };
 
-  stepInHandler = (event) => {
-    const word = event.target.value;
-    const newEnv = jsonDeepClone(peek(this.now().environments));
-    newEnv["Input"] = newEnv["WordDict"].find((w) => w["WordName"] === word)[
-      "WordText"
-    ];
+  handleStepIn = (event) => {
+    const wordName = event.target.value;
+    const newEnv = pipe(peek, jsonDeepClone)(this.now().environments)
+    const word = find(compose(equals(wordName), prop("WordName")), newEnv["WordDict"]);
+    newEnv["Input"] = word["WordText"];
+    newEnv["mode"] = word["IsImmediate"] ? "Execute" : newEnv["mode"];
     newEnv["InputIndex"] = 0;
 
     var newHistoryMoment = {
@@ -395,7 +398,8 @@ class App extends React.Component {
           curIndex={env["InputIndex"]}
           curLine={env["Input"]}
           isEnabled={isEnabled}
-          stepInHandler={isEnabled ? this.stepInHandler : () => {}}
+          isCompileMode={env["mode"] === "Compile"}
+          handleStepIn={isEnabled ? this.handleStepIn : () => {}}
         />
       );
     });
