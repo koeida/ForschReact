@@ -20,11 +20,13 @@ client.on('error', err => {
 });
 
 client.set('foo', 'bar', (err, reply) => {
-  if (err) throw err;
+  if (err)
+    console.log(err);
   console.log(reply);
 
   client.get('foo', (err, reply) => {
-    if (err) throw err;
+    if (err)
+      console.log(err);
     console.log(reply);
   });
 });
@@ -32,7 +34,8 @@ client.set('foo', 'bar', (err, reply) => {
 app.get('/getList', (req, res) => {
   console.log("loading list of dictionaries " + req.params.dictId);
   client.sort('dicts', "ALPHA", (err, reply) => {
-    if (err) throw err;
+    if (err)
+      console.log(err);
     console.log("reply: " + reply);
     return res.json({dictionaries: reply});
   });
@@ -42,7 +45,8 @@ app.get('/load/:dictId', (req, res) => {
   const key = 'dicts:' + req.params.dictId;
   console.log("loading " + req.params.dictId);
   client.get(key, (err, reply) => {
-    if (err) throw err;
+    if (err)
+      console.log(err);
     console.log("reply: " + reply);
     return res.json(reply);
   });
@@ -52,11 +56,17 @@ app.post('/save', (req, res) => {
   console.log("saving dictionary");
   console.log(req.body);
   client.sadd("dicts", req.body.id, (err, reply) => {
-    if (err) throw err;
+    if (err) {
+      console.log(err);
+      return
+    }
     console.log("adding dictionary to dicts set: " + reply);
 
-    client.set("dicts:" + req.body.id, req.body.environment, (err, reply) =>  {
-      if (err) throw err;
+    client.set("dicts:" + req.body.id, JSON.stringify(req.body.environment), (err, reply) =>  {
+      if (err) {
+        console.log(err);
+        return
+      }
       console.log("setting dicts:" + req.body.id + " => " + reply);
     })
   });

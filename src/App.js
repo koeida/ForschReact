@@ -8,6 +8,7 @@ import 'react-dropdown/style.css';
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
   WordDict: [
+    /*
     {
       WordName: "BOXLINE",
       IsImmediate: false,
@@ -58,6 +59,7 @@ const DEFAULT_ENVIRONMENT = {
       IsImmediate: true,
       WordText: ["[", "BRANCH?", "]", ","],
     },
+    */
   ],
   Input: [],
   InputIndex: 0,
@@ -348,12 +350,13 @@ class App extends React.Component {
     const name = prompt("Enter a name for the environment:");
     if (name === null)
       return;
-
-    const postBody ={id: name, environment: JSON.stringify(peek(this.now().environments))}; 
+    
+    const curEnv = peek(this.now().environments);
+    const postBody = JSON.stringify({id: name, environment: curEnv}); 
     const requestOptions = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(postBody)
+      body: postBody
     };
     fetch("/save", requestOptions)
       .then(response => response.json())
@@ -362,10 +365,11 @@ class App extends React.Component {
   }
 
   handleStepForward = (event) => {
+    const postBody = pipe(peek, JSON.stringify)(this.now().environments);
     const requestOptions = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(peek(this.now().environments)),
+      body: postBody
     };
     fetch(STEPPER_URL, requestOptions)
       .then((response) => response.json())
