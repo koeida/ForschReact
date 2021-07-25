@@ -7,9 +7,24 @@ const DEFAULT_ENVIRONMENT = {
   DataStack: [],
   WordDict: [
     {
-      WordName: "fillRect",
+      WordName: "BOXLINE",
+      IsImmediate: false,
+      WordText: '1 DUP 26 * 50 25 25 CRECT 1 + DUP 11 = BRANCH? 0'.split(" "),
+    },
+    {
+      WordName: "CRECT",
+      IsImmediate: false,
+      WordText: 'RANDFILL . FILLRECT .'.split(" "),
+    },
+    {
+      WordName: "FILLRECT",
       IsImmediate: false,
       WordText: 'ctx.fillRect( CALLF4'.split(" "),
+    },
+    {
+      WordName: "RANDFILL",
+      IsImmediate: false,
+      WordText: '0 255 RAND 0 255 RAND 0 255 RAND ctx.fillStyle_=_\'rgb( " CALLF3 \' +'.split(" "),
     },
     {
       WordName: "CALLF1",
@@ -19,17 +34,17 @@ const DEFAULT_ENVIRONMENT = {
     {
       WordName: "CALLF2",
       IsImmediate: false,
-      WordText: '" ROT " + ,_ " + SWAP " + ) " + .'.split(" "), 
+      WordText: '" ROT " + ,_ " + SWAP " + ) " +'.split(" "), 
     },
     {
       WordName: "CALLF3",
       IsImmediate: false,
-      WordText: '" 3 PICK " + ,_ " + ROT " + ,_ " + SWAP " + ) " + . DROP'.split(" "),
+      WordText: '" 3 PICK " + ,_ " + ROT " + ,_ " + SWAP " + ) " +'.split(" "),
     },
     {
       WordName: "CALLF4",
       IsImmediate: false,
-      WordText: '" 4 PICK " + ,_ " + 3 PICK " + ,_ " + 2 PICK " + ,_ " + 1 PICK " + ) + . . . . .'.split(" "),
+      WordText: '" 4 PICK " + ,_ " + 3 PICK " + ,_ " + 2 PICK " + ,_ " + 1 PICK " + ) +'.split(" "),
     },
     {
       WordName: "BEGIN",
@@ -231,26 +246,21 @@ function Stack(props) {
 }
 
 class Canvas extends React.Component {
-  componentDidMount() {
-  }
-
   componentDidUpdate() {
     const canvas = this.refs.canvas;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    console.log(this.props.output);
     for(const s of this.props.output) {
       if(startsWith('ctx.', s)) {
         eval(s)  
       }
     }
-    
-    eval('ctx.font = "18pt Mono";');
-    eval('ctx.fillText("baruch hashem", 0, 75)');
   }
 
   render() {
     return (
-      <div className="row justify-content-center">
+      <div className="d-flex justify-content-center">
         <canvas ref="canvas"/>
       </div>
     )
@@ -261,7 +271,7 @@ class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      input: "a b c d forward(",
+      input: "10 50 25 25 CRECT",
       curHistoryIndex: 0,
       history: [{ output: [], mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
     };

@@ -1,4 +1,4 @@
-import {last, compose, equals, prop, find, reverse, pipe, dropLastWhile} from "ramda";
+import {last, dropLastWhile} from "ramda";
 
 function jsonDeepClone(json) {
   return JSON.parse(JSON.stringify(json));
@@ -62,7 +62,7 @@ const getNewMoment = (now, newEnvironment, curInput) => {
   const inputIsComplete = newEnvironment["InputIndex"] >= newEnvironment["Input"].length;
   const curEnvironments = now.environments.slice(0, -1).concat(newEnvironment);
   const newOutput = newEnvironment["Output"] !== ""
-    ? now.output.concat([newEnvironment["Output"]])
+    ? now.output.concat(newEnvironment["Output"].split("\n"))
     : now.output;
 
   if (inputIsComplete) {
