@@ -1,2 +1,3 @@
 const wsdlUrl = 'http://forsch-service:9000/ForschService.asmx?wsdl'
+const redisUrl = 'forsch-redis'
 module.exports = { wsdlUrl };

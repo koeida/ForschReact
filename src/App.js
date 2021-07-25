@@ -2,6 +2,8 @@ import "./App.css";
 import React from "react";
 import {startsWith, compose, equals, prop, find, pipe} from "ramda";
 import {getNewMoment, jsonDeepClone, peek} from "./utils.js";
+import Dropdown from 'react-dropdown';
+import 'react-dropdown/style.css';
 
 const DEFAULT_ENVIRONMENT = {
   DataStack: [],
@@ -66,6 +68,14 @@ const DEFAULT_ENVIRONMENT = {
 };
 
 const STEPPER_URL = "/step";
+
+
+function Menu(props) {
+  const options = props.items;
+  return (
+    <Dropdown onChange={props.handleMenuChange} options={options} placeholder="Load dictionary..."/>
+  );
+}
 
 function Word(props) {
   const currentClass = props.isCurrentWord ? "current-word" : "";
@@ -202,8 +212,12 @@ function Dictionary(props) {
 
   return (
     <div id="dictionary" className="card">
-      <div className="card-header text-center">
-        <i className="fas fa-book me-1"></i>Dictionary
+      <div className="card-header d-flex justify-content-between">
+        <button onClick={props.saveHandler} className="btn btn-secondary" id="save-dictionary"><i className="fas fa-save"></i></button>
+        <div className="align-self-center">
+          <i className="fas fa-book me-1"></i>Dictionary
+        </div>
+        <div></div>
       </div>
       <div className="card-body">
         <table className="table table-bordered">
@@ -250,7 +264,6 @@ class Canvas extends React.Component {
     const canvas = this.refs.canvas;
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    console.log(this.props.output);
     for(const s of this.props.output) {
       if(startsWith('ctx.', s)) {
         eval(s)  
@@ -274,7 +287,12 @@ class App extends React.Component {
       input: "10 50 25 25 CRECT",
       curHistoryIndex: 0,
       history: [{ output: [], mode: "pause", environments: [DEFAULT_ENVIRONMENT] }],
+      menuItems: [],
     };
+  }
+
+  componentDidMount() {
+    this.getMenuItems();      
   }
 
   handleDebuggerClick = (e) => {
@@ -325,6 +343,23 @@ class App extends React.Component {
   now = () => {
     return this.state.history[this.state.curHistoryIndex];
   };
+
+  handleSave = (event) => {
+    const name = prompt("Enter a name for the environment:");
+    if (name === null)
+      return;
+
+    const postBody ={id: name, environment: JSON.stringify(peek(this.now().environments))}; 
+    const requestOptions = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(postBody)
+    };
+    fetch("/save", requestOptions)
+      .then(response => response.json())
+      .then(data => console.log("Saved."))
+      .catch(error => console.log(error));
+  }
 
   handleStepForward = (event) => {
     const requestOptions = {
@@ -379,6 +414,27 @@ class App extends React.Component {
     });
   };
 
+  getMenuItems = () => {
+    fetch("/getList")
+      .then(response => response.json())
+      .then(data => this.setState({
+        menuItems: data.dictionaries,          
+      }))
+      .catch(error => console.log(error));
+  };
+
+  handleMenuChange = (e) => {
+    fetch("/load/" + e.value)
+      .then(response => response.json())
+      .then(data => this.setState(state => { return {
+        input: state.input,
+        curHistoryIndex: 0,
+        history: [{ output: [], mode: "pause", environments: [JSON.parse(data)] }],
+        menuItems: state.menuItems,
+      };}))
+      .catch(error => console.log(error));
+  };
+
   render() {
     const e = peek(this.now().environments);
     const curWord = (env) =>
@@ -408,11 +464,13 @@ class App extends React.Component {
       <div id="app-main">
         <div className="container-fluid">
           <header>
-            <div className="d-flex justify-content-center px-3 py-2 bg-light mb-4">
-              <h1>
+            <div className="d-flex justify-content-between align-items-center px-3 py-2 bg-light mb-4">
+              <Menu items={this.state.menuItems} handleMenuChange={this.handleMenuChange}/>
+              <h1 className="mt-1">
                 <i className="fas fa-layer-group me-4"></i>Forsch: A Forth Clone
                 in C#
               </h1>
+              <div style={{'minWidth': 187}}></div>
             </div>
           </header>
         </div>
@@ -441,7 +499,7 @@ class App extends React.Component {
               <Stack stack={e["DataStack"]} />
             </div>
             <div className="col-8">
-              <Dictionary dictionary={e["WordDict"]} curWord={curWord(e)} />
+              <Dictionary saveHandler={this.handleSave} dictionary={e["WordDict"]} curWord={curWord(e)} />
             </div>
           </div>
         </div>
